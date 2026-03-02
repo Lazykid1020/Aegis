@@ -48,7 +48,14 @@ export default function App() {
     }
   };
 
+  const clearApprovalButtons = () => {
+    setMessages(prev => prev.map(msg =>
+      msg.requiresApproval ? { ...msg, requiresApproval: false } : msg
+    ));
+  };
+
   const handleApprove = async () => {
+    clearApprovalButtons();
     setLoading(true);
     try {
       const data = await approveAction('rag-session');
@@ -70,6 +77,7 @@ export default function App() {
   };
 
   const handleReject = async () => {
+    clearApprovalButtons();
     setLoading(true);
     try {
       const data = await rejectAction('rag-session');
