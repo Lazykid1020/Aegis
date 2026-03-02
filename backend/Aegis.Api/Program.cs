@@ -48,9 +48,7 @@ builder.Services.AddSingleton<Kernel>(sp =>
 #pragma warning restore SKEXP0070
 
 // ── Register our Agent Services ──────────────────────────────
-builder.Services.AddSingleton<SupervisorAgent>();
-builder.Services.AddSingleton<GuardrailAgent>();
-builder.Services.AddSingleton<ConfidenceScorer>();
+builder.Services.AddSingleton<BaseAgent>();
 builder.Services.AddSingleton<OrchestratorService>();
 
 var app = builder.Build();
