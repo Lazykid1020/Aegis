@@ -1,0 +1,190 @@
+Using launch settings from /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/Properties/launchSettings.json...
+Building...
+info: Aegis.Api.Services.KnowledgeBaseService[0]
+      Initializing Mock Volatile Knowledge Base...
+info: Aegis.Api.Services.KnowledgeBaseService[0]
+      Mock Volatile Knowledge Base successfully populated with 4 records.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5000
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api
+info: Aegis.Api.Controllers.ChatController[0]
+      Chat request from user jdoe: My laptop is broken.
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-5] Retrieving RAG context from Volatile DB...
+info: Aegis.Api.Services.KnowledgeBaseService[0]
+      Searching Volatile Knowledge Base for: 'My laptop is broken.'
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-5] Evaluating Confidence...
+fail: Aegis.Api.Services.BaseAgent[0]
+      Failed to evaluate confidence. Defaulting to 50.
+      Microsoft.SemanticKernel.HttpOperationException: Response status code does not indicate success: 429 (Too Many Requests).
+       ---> System.Net.Http.HttpRequestException: Response status code does not indicate success: 429 (Too Many Requests).
+         at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.ClientBase.SendRequestAndGetStringBodyAsync(HttpRequestMessage httpRequestMessage, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.SendRequestAndReturnValidGeminiResponseAsync(Uri endpoint, GeminiRequest geminiRequest, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.GenerateChatMessageAsync(ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.ChatCompletion.ChatCompletionServiceExtensions.GetChatMessageContentAsync(IChatCompletionService chatCompletionService, ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Aegis.Api.Services.BaseAgent.EvaluateConfidenceAsync(String sessionId, String userMessage, String contextFromVectorDb) in /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/Services/BaseAgent.cs:line 85
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-5] Confidence Score: 50%. Reasoning: Failed to parse JSON confidence evaluation.
+warn: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-5] Low Confidence (50%). Engaging ticket gathering mode.
+fail: Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware[1]
+      An unhandled exception has occurred while executing the request.
+      Microsoft.SemanticKernel.HttpOperationException: Response status code does not indicate success: 429 (Too Many Requests).
+       ---> System.Net.Http.HttpRequestException: Response status code does not indicate success: 429 (Too Many Requests).
+         at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.ClientBase.SendRequestAndGetStringBodyAsync(HttpRequestMessage httpRequestMessage, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.SendRequestAndReturnValidGeminiResponseAsync(Uri endpoint, GeminiRequest geminiRequest, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.GenerateChatMessageAsync(ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.ChatCompletion.ChatCompletionServiceExtensions.GetChatMessageContentAsync(IChatCompletionService chatCompletionService, ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Aegis.Api.Services.OrchestratorService.ProcessAsync(ChatRequest request) in /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/Services/OrchestratorService.cs:line 68
+         at Aegis.Api.Controllers.ChatController.Chat(ChatRequest request) in /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/Controllers/ChatController.cs:line 32
+         at lambda_method5(Closure, Object)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+         at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+info: Aegis.Api.Controllers.ChatController[0]
+      Chat request from user jdoe: My laptop is broken.
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Retrieving RAG context from Volatile DB...
+info: Aegis.Api.Services.KnowledgeBaseService[0]
+      Searching Volatile Knowledge Base for: 'My laptop is broken.'
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Evaluating Confidence...
+fail: Aegis.Api.Services.BaseAgent[0]
+      Failed to evaluate confidence. Defaulting to 50.
+      Microsoft.SemanticKernel.HttpOperationException: Response status code does not indicate success: 429 (Too Many Requests).
+       ---> System.Net.Http.HttpRequestException: Response status code does not indicate success: 429 (Too Many Requests).
+         at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.ClientBase.SendRequestAndGetStringBodyAsync(HttpRequestMessage httpRequestMessage, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.SendRequestAndReturnValidGeminiResponseAsync(Uri endpoint, GeminiRequest geminiRequest, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.GenerateChatMessageAsync(ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.ChatCompletion.ChatCompletionServiceExtensions.GetChatMessageContentAsync(IChatCompletionService chatCompletionService, ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Aegis.Api.Services.BaseAgent.EvaluateConfidenceAsync(String sessionId, String userMessage, String contextFromVectorDb) in /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/Services/BaseAgent.cs:line 85
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Confidence Score: 50%. Reasoning: Failed to parse JSON confidence evaluation.
+warn: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Low Confidence (50%). Engaging ticket gathering mode.
+info: Aegis.Api.Controllers.ChatController[0]
+      Chat request from user jdoe: Title: Screen is cracked. Desc: I dropped it and the screen shattered. Category: Hardware. Urgency: High.
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Retrieving RAG context from Volatile DB...
+info: Aegis.Api.Services.KnowledgeBaseService[0]
+      Searching Volatile Knowledge Base for: 'Title: Screen is cracked. Desc: I dropped it and the screen shattered. Category: Hardware. Urgency: High.'
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Evaluating Confidence...
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Confidence Score: 0%. Reasoning: The user's issue is a physical hardware damage (cracked screen) which explicitly requires human intervention for repair or replacement. The provided Knowledge Base has 'No relevant articles found', meaning I cannot offer any solutions, troubleshooting steps, or even guide the user on how to report physical damage or request a replacement device. Therefore, I cannot safely and effectively progress or resolve this issue without human IT staff intervention.
+warn: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Low Confidence (0%). Engaging ticket gathering mode.
+fail: Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware[1]
+      An unhandled exception has occurred while executing the request.
+      Microsoft.SemanticKernel.HttpOperationException: Response status code does not indicate success: 429 (Too Many Requests).
+       ---> System.Net.Http.HttpRequestException: Response status code does not indicate success: 429 (Too Many Requests).
+         at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.ClientBase.SendRequestAndGetStringBodyAsync(HttpRequestMessage httpRequestMessage, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.SendRequestAndReturnValidGeminiResponseAsync(Uri endpoint, GeminiRequest geminiRequest, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.GenerateChatMessageAsync(ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.ChatCompletion.ChatCompletionServiceExtensions.GetChatMessageContentAsync(IChatCompletionService chatCompletionService, ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Aegis.Api.Services.OrchestratorService.ProcessAsync(ChatRequest request) in /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/Services/OrchestratorService.cs:line 68
+         at Aegis.Api.Controllers.ChatController.Chat(ChatRequest request) in /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/Controllers/ChatController.cs:line 32
+         at lambda_method5(Closure, Object)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+         at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+info: Aegis.Api.Controllers.ChatController[0]
+      Chat request from user jdoe: Title: Screen is cracked. Desc: I dropped it and the screen shattered. Category: Hardware. Urgency: High.
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Retrieving RAG context from Volatile DB...
+info: Aegis.Api.Services.KnowledgeBaseService[0]
+      Searching Volatile Knowledge Base for: 'Title: Screen is cracked. Desc: I dropped it and the screen shattered. Category: Hardware. Urgency: High.'
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Evaluating Confidence...
+fail: Aegis.Api.Services.BaseAgent[0]
+      Failed to evaluate confidence. Defaulting to 50.
+      Microsoft.SemanticKernel.HttpOperationException: Response status code does not indicate success: 429 (Too Many Requests).
+       ---> System.Net.Http.HttpRequestException: Response status code does not indicate success: 429 (Too Many Requests).
+         at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.ClientBase.SendRequestAndGetStringBodyAsync(HttpRequestMessage httpRequestMessage, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.SendRequestAndReturnValidGeminiResponseAsync(Uri endpoint, GeminiRequest geminiRequest, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.GenerateChatMessageAsync(ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.ChatCompletion.ChatCompletionServiceExtensions.GetChatMessageContentAsync(IChatCompletionService chatCompletionService, ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Aegis.Api.Services.BaseAgent.EvaluateConfidenceAsync(String sessionId, String userMessage, String contextFromVectorDb) in /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/Services/BaseAgent.cs:line 85
+info: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Confidence Score: 50%. Reasoning: Failed to parse JSON confidence evaluation.
+warn: Aegis.Api.Services.OrchestratorService[0]
+      [Session ticket-test-6] Low Confidence (50%). Engaging ticket gathering mode.
+fail: Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware[1]
+      An unhandled exception has occurred while executing the request.
+      Microsoft.SemanticKernel.HttpOperationException: Response status code does not indicate success: 429 (Too Many Requests).
+       ---> System.Net.Http.HttpRequestException: Response status code does not indicate success: 429 (Too Many Requests).
+         at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption completionOption, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Http.HttpClientExtensions.SendWithSuccessCheckAsync(HttpClient client, HttpRequestMessage request, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.ClientBase.SendRequestAndGetStringBodyAsync(HttpRequestMessage httpRequestMessage, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.SendRequestAndReturnValidGeminiResponseAsync(Uri endpoint, GeminiRequest geminiRequest, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.Connectors.Google.Core.GeminiChatCompletionClient.GenerateChatMessageAsync(ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Microsoft.SemanticKernel.ChatCompletion.ChatCompletionServiceExtensions.GetChatMessageContentAsync(IChatCompletionService chatCompletionService, ChatHistory chatHistory, PromptExecutionSettings executionSettings, Kernel kernel, CancellationToken cancellationToken)
+         at Aegis.Api.Services.OrchestratorService.ProcessAsync(ChatRequest request) in /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/Services/OrchestratorService.cs:line 68
+         at Aegis.Api.Controllers.ChatController.Chat(ChatRequest request) in /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/Controllers/ChatController.cs:line 32
+         at lambda_method5(Closure, Object)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+         at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+         at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...

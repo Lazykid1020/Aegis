@@ -27,13 +27,3 @@ export async function rejectAction(sessionId) {
     if (!res.ok) throw new Error(`API error: ${res.status}`);
     return res.json();
 }
-
-export async function submitFeedback(sessionId, isPositive, comment) {
-    const res = await fetch(`${API_BASE}/chat/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, isPositive, comment }),
-    });
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    return res.json();
-}

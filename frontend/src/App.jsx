@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { sendMessage, approveAction, rejectAction, submitFeedback } from './api';
+import { sendMessage, approveAction, rejectAction } from './api';
 
 function formatTime() {
   return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -33,6 +33,7 @@ export default function App() {
         content: data.message,
         actionTaken: data.actionTaken,
         requiresApproval: data.requiresApproval,
+        proposedTicket: data.proposedTicket,
         time: formatTime()
       };
       setMessages(prev => [...prev, assistantMsg]);
@@ -53,12 +54,16 @@ export default function App() {
       const data = await approveAction('rag-session');
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: `✔️ **Ticket Request Approved.**\n\n${data.message}`,
+        content: `✔️ **Ticket Created Successfully.**\n\n${data.message}`,
         actionTaken: data.actionTaken,
         time: formatTime()
       }]);
     } catch (err) {
-      console.error(err);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `❌ Error creating ticket: ${err.message}`,
+        time: formatTime()
+      }]);
     } finally {
       setLoading(false);
     }
@@ -70,7 +75,7 @@ export default function App() {
       const data = await rejectAction('rag-session');
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: `❌ **Ticket Request Cancelled.**\n\n${data.message}`,
+        content: data.message,
         actionTaken: data.actionTaken,
         time: formatTime()
       }]);
@@ -78,23 +83,6 @@ export default function App() {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleFeedback = async (msgIndex, isPositive) => {
-    // Optimistically update the UI so the user sees their feedback was recorded
-    setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, feedbackGiven: isPositive ? 'positive' : 'negative' } : m));
-
-    if (!isPositive) {
-      // Send a conversational feedback message to trigger the LLM to re-evaluate and lower confidence
-      const feedbackMsg = "User Feedback: 👎 That solution did not work to resolve my issue. Do you have another idea?";
-      handleSend(feedbackMsg);
-    } else {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "✨ *Feedback received. I am glad that solution worked for you!*",
-        time: formatTime()
-      }]);
     }
   };
 
@@ -136,7 +124,7 @@ export default function App() {
         <div className="sidebar-footer">
           <div className="status-indicator">
             <div className="status-dot" />
-            <span>Hybrid Base Agent • Active</span>
+            <span>Aegis Agent • Active</span>
           </div>
         </div>
       </aside>
@@ -145,7 +133,7 @@ export default function App() {
       <main className="main-content">
         <header className="header">
           <div className="header-left">
-            <span className="page-title">Issue Resolution Chat (RAG + Confidence)</span>
+            <span className="page-title">IT Support Chat</span>
           </div>
           <div className="header-right">
             <span className="model-badge">gemini-2.5-flash</span>
@@ -158,7 +146,7 @@ export default function App() {
               <div className="empty-state">
                 <div className="empty-icon">🛡️</div>
                 <h2>How can Aegis help?</h2>
-                <p>Welcome to the Confidence-Based RAG Demo. Ask a question! If I am confident, I will answer. If I am not, I will ask for permission to raise an IT support ticket.</p>
+                <p>Describe your IT issue and I'll help troubleshoot it. If I can't resolve it, I'll help you raise a support ticket.</p>
                 <div className="quick-actions">
                   {quickActions.map((qa, i) => (
                     <div key={i} className="quick-action" onClick={() => handleSend(qa.text)}>
@@ -183,37 +171,45 @@ export default function App() {
                       <div className="message-content" dangerouslySetInnerHTML={{
                         __html: msg.content
                           ?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\*(.*?)\*/g, '<em>$1</em>')
                           .replace(/\n/g, '<br/>')
                       }} />
 
-                      {/* HITL UI For Ticket Approval */}
-                      {msg.role === 'assistant' && msg.requiresApproval && !msg.feedbackGiven && (
-                        <div className="hitl-actions">
-                          <button className="btn btn-approve" onClick={handleApprove} disabled={loading}>
-                            ✓ Create Priority Ticket
-                          </button>
-                          <button className="btn btn-reject" onClick={handleReject} disabled={loading}>
-                            ✕ No, cancel
-                          </button>
+                      {/* Ticket Preview Card */}
+                      {msg.role === 'assistant' && msg.proposedTicket && (
+                        <div className="ticket-preview">
+                          <div className="ticket-preview-header">📋 Proposed Ticket</div>
+                          <div className="ticket-preview-body">
+                            <div className="ticket-field">
+                              <span className="ticket-label">Title</span>
+                              <span className="ticket-value">{msg.proposedTicket.title}</span>
+                            </div>
+                            <div className="ticket-field">
+                              <span className="ticket-label">Category</span>
+                              <span className="ticket-value">{msg.proposedTicket.category}</span>
+                            </div>
+                            <div className="ticket-field">
+                              <span className="ticket-label">Urgency</span>
+                              <span className={`ticket-urgency urgency-${msg.proposedTicket.urgency?.toLowerCase()}`}>
+                                {msg.proposedTicket.urgency}
+                              </span>
+                            </div>
+                            <div className="ticket-field full-width">
+                              <span className="ticket-label">Description</span>
+                              <span className="ticket-value">{msg.proposedTicket.description}</span>
+                            </div>
+                          </div>
                         </div>
                       )}
 
-                      {/* Feedback UI For High Confidence Solutions */}
-                      {msg.role === 'assistant' && msg.actionTaken === 'action_info' && (
-                        <div className="feedback-row">
-                          <button
-                            className={`feedback-btn ${msg.feedbackGiven === 'positive' ? 'selected' : ''}`}
-                            onClick={() => handleFeedback(idx, true)}
-                            disabled={!!msg.feedbackGiven}
-                          >
-                            👍 Helpful
+                      {/* HITL Approval Buttons */}
+                      {msg.role === 'assistant' && msg.requiresApproval && (
+                        <div className="hitl-actions">
+                          <button className="btn btn-approve" onClick={handleApprove} disabled={loading}>
+                            ✓ Approve & Create Ticket
                           </button>
-                          <button
-                            className={`feedback-btn ${msg.feedbackGiven === 'negative' ? 'selected' : ''}`}
-                            onClick={() => handleFeedback(idx, false)}
-                            disabled={!!msg.feedbackGiven}
-                          >
-                            👎 Not helpful (Lower Agent Confidence)
+                          <button className="btn btn-reject" onClick={handleReject} disabled={loading}>
+                            ✕ No, don't create
                           </button>
                         </div>
                       )}

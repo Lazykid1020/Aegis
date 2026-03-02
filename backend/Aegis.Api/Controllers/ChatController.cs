@@ -5,8 +5,8 @@ using Aegis.Api.Services;
 namespace Aegis.Api.Controllers;
 
 /// <summary>
-/// Main entry point for the AI agent. Receives user messages and orchestrates
-/// the Supervisor → Confidence Scorer → Guardrail → Execution pipeline.
+/// Main entry point for the AI agent. Receives user messages and routes them
+/// through the Orchestrator → BaseAgent pipeline.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -36,35 +36,16 @@ public class ChatController : ControllerBase
     [HttpPost("approve/{sessionId}")]
     public async Task<ActionResult<ChatResponse>> Approve(string sessionId)
     {
-        _logger.LogInformation("Approval received for session {SessionId}", sessionId);
+        _logger.LogInformation("Ticket approval received for session {SessionId}", sessionId);
         var response = await _orchestrator.ApproveActionAsync(sessionId);
         return Ok(response);
     }
 
     [HttpPost("reject/{sessionId}")]
-    public ActionResult<ChatResponse> Reject(string sessionId)
+    public async Task<ActionResult<ChatResponse>> Reject(string sessionId)
     {
-        _logger.LogInformation("Rejection received for session {SessionId}", sessionId);
-        return Ok(new ChatResponse
-        {
-            SessionId = sessionId,
-            Message = "Action has been rejected. The issue has been escalated to a human agent.",
-            ActionTaken = "ticket_created"
-        });
+        _logger.LogInformation("Ticket rejection received for session {SessionId}", sessionId);
+        var response = await _orchestrator.RejectActionAsync(sessionId);
+        return Ok(response);
     }
-
-    [HttpPost("feedback")]
-    public ActionResult SubmitFeedback([FromBody] FeedbackRequest feedback)
-    {
-        _logger.LogInformation("Feedback for session {SessionId}: {Rating}", feedback.SessionId, feedback.IsPositive ? "Positive" : "Negative");
-        _orchestrator.RecordFeedback(feedback.SessionId, feedback.IsPositive, feedback.Comment);
-        return Ok(new { message = "Feedback recorded. Thank you!" });
-    }
-}
-
-public class FeedbackRequest
-{
-    public string SessionId { get; set; } = string.Empty;
-    public bool IsPositive { get; set; }
-    public string? Comment { get; set; }
 }
