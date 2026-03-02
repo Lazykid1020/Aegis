@@ -25,19 +25,23 @@ builder.Services.AddHttpClient("MockApi", client =>
     client.BaseAddress = new Uri("http://localhost:5000");
 });
 
-// ── Microsoft Semantic Kernel (Google Gemini) ────────────────
-var geminiApiKey = builder.Configuration["Gemini:ApiKey"] ??
-    Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? "";
-var geminiModel = builder.Configuration["Gemini:Model"] ?? "gemini-2.0-flash-lite";
+// ── Microsoft Semantic Kernel (Azure AI Foundry / OpenAI) ────
+var azureEndpoint = builder.Configuration["AzureOpenAI:Endpoint"] ??
+    Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ??
+    "https://taxsource-api-resource.services.ai.azure.com/";
+var azureApiKey = builder.Configuration["AzureOpenAI:ApiKey"] ??
+    Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY") ?? "";
+var azureDeployment = builder.Configuration["AzureOpenAI:Deployment"] ??
+    Environment.GetEnvironmentVariable("AZURE_OPENAI_DEPLOYMENT") ?? "gpt-5-mini";
 
-#pragma warning disable SKEXP0070 // Google connector is experimental
 builder.Services.AddSingleton<Kernel>(sp =>
 {
     var kernelBuilder = Kernel.CreateBuilder();
 
-    kernelBuilder.AddGoogleAIGeminiChatCompletion(
-        modelId: geminiModel,
-        apiKey: geminiApiKey);
+    kernelBuilder.AddAzureOpenAIChatCompletion(
+        deploymentName: azureDeployment,
+        endpoint: azureEndpoint,
+        apiKey: azureApiKey);
 
     // Register the IT Operations plugin
     var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
@@ -45,7 +49,6 @@ builder.Services.AddSingleton<Kernel>(sp =>
 
     return kernelBuilder.Build();
 });
-#pragma warning restore SKEXP0070
 
 // ── Register our Agent Services ──────────────────────────────
 builder.Services.AddSingleton<KnowledgeBaseService>();
