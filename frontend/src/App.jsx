@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { sendMessage } from './api';
+import { sendMessage, approveAction, rejectAction, submitFeedback } from './api';
 
 function formatTime() {
   return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -27,10 +27,12 @@ export default function App() {
     setLoading(true);
 
     try {
-      const data = await sendMessage('demo-user', msg, 'mvp-session');
+      const data = await sendMessage('demo-user', msg, 'rag-session');
       const assistantMsg = {
         role: 'assistant',
         content: data.message,
+        actionTaken: data.actionTaken,
+        requiresApproval: data.requiresApproval,
         time: formatTime()
       };
       setMessages(prev => [...prev, assistantMsg]);
@@ -38,10 +40,69 @@ export default function App() {
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: `❌ Error connecting to Aegis backend: ${err.message}.`,
-        time: formatTime(),
+        time: formatTime()
       }]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    setLoading(true);
+    try {
+      const data = await approveAction('rag-session');
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `✔️ **Ticket Request Approved.**\n\n${data.message}`,
+        actionTaken: data.actionTaken,
+        time: formatTime()
+      }]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    setLoading(true);
+    try {
+      const data = await rejectAction('rag-session');
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `❌ **Ticket Request Cancelled.**\n\n${data.message}`,
+        actionTaken: data.actionTaken,
+        time: formatTime()
+      }]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFeedback = async (msgIndex, isPositive) => {
+    // Optimistically update the UI so the user sees their feedback was recorded
+    setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, feedbackGiven: isPositive ? 'positive' : 'negative' } : m));
+    try {
+      await submitFeedback('rag-session', isPositive, 'User feedback');
+
+      // If negative feedback, we append a simulated response acknowledging it.
+      if (!isPositive) {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: "⚠️ *Feedback received. I have lowered my confidence in that specific knowledge base article for future queries so that I am more likely to ask to raise a ticket instead of automatically replying with it.*",
+          time: formatTime()
+        }]);
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: "✨ *Feedback received. I've increased my confidence in that knowledge base article.*",
+          time: formatTime()
+        }]);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -54,7 +115,6 @@ export default function App() {
 
   const quickActions = [
     { icon: '🔑', text: 'My password expired, please reset it' },
-    { icon: '🛡️', text: 'Grant admin access to production VPN' },
     { icon: '🖥️', text: 'The production server crashed and is unresponsive' },
     { icon: '📖', text: 'How do I connect to the guest WiFi?' }
   ];
@@ -84,7 +144,7 @@ export default function App() {
         <div className="sidebar-footer">
           <div className="status-indicator">
             <div className="status-dot" />
-            <span>MVP Agent • Active</span>
+            <span>Hybrid Base Agent • Active</span>
           </div>
         </div>
       </aside>
@@ -93,7 +153,7 @@ export default function App() {
       <main className="main-content">
         <header className="header">
           <div className="header-left">
-            <span className="page-title">Issue Resolution Chat (MVP)</span>
+            <span className="page-title">Issue Resolution Chat (RAG + Confidence)</span>
           </div>
           <div className="header-right">
             <span className="model-badge">gemini-2.5-flash</span>
@@ -106,7 +166,7 @@ export default function App() {
               <div className="empty-state">
                 <div className="empty-icon">🛡️</div>
                 <h2>How can Aegis help?</h2>
-                <p>Describe your IT issue. I am connected to the Vector DB and can answer questions or create tickets for you.</p>
+                <p>Welcome to the Confidence-Based RAG Demo. Ask a question! If I am confident, I will answer. If I am not, I will ask for permission to raise an IT support ticket.</p>
                 <div className="quick-actions">
                   {quickActions.map((qa, i) => (
                     <div key={i} className="quick-action" onClick={() => handleSend(qa.text)}>
@@ -133,6 +193,38 @@ export default function App() {
                           ?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                           .replace(/\n/g, '<br/>')
                       }} />
+
+                      {/* HITL UI For Ticket Approval */}
+                      {msg.role === 'assistant' && msg.requiresApproval && !msg.feedbackGiven && (
+                        <div className="hitl-actions">
+                          <button className="btn btn-approve" onClick={handleApprove} disabled={loading}>
+                            ✓ Create Priority Ticket
+                          </button>
+                          <button className="btn btn-reject" onClick={handleReject} disabled={loading}>
+                            ✕ No, cancel
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Feedback UI For High Confidence Solutions */}
+                      {msg.role === 'assistant' && msg.actionTaken === 'action_info' && (
+                        <div className="feedback-row">
+                          <button
+                            className={`feedback-btn ${msg.feedbackGiven === 'positive' ? 'selected' : ''}`}
+                            onClick={() => handleFeedback(idx, true)}
+                            disabled={!!msg.feedbackGiven}
+                          >
+                            👍 Helpful
+                          </button>
+                          <button
+                            className={`feedback-btn ${msg.feedbackGiven === 'negative' ? 'selected' : ''}`}
+                            onClick={() => handleFeedback(idx, false)}
+                            disabled={!!msg.feedbackGiven}
+                          >
+                            👎 Not helpful (Lower Agent Confidence)
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
