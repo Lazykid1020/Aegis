@@ -84,25 +84,17 @@ export default function App() {
   const handleFeedback = async (msgIndex, isPositive) => {
     // Optimistically update the UI so the user sees their feedback was recorded
     setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, feedbackGiven: isPositive ? 'positive' : 'negative' } : m));
-    try {
-      await submitFeedback('rag-session', isPositive, 'User feedback');
 
-      // If negative feedback, we append a simulated response acknowledging it.
-      if (!isPositive) {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: "⚠️ *Feedback received. I have lowered my confidence in that specific knowledge base article for future queries so that I am more likely to ask to raise a ticket instead of automatically replying with it.*",
-          time: formatTime()
-        }]);
-      } else {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: "✨ *Feedback received. I've increased my confidence in that knowledge base article.*",
-          time: formatTime()
-        }]);
-      }
-    } catch (err) {
-      console.error(err);
+    if (!isPositive) {
+      // Send a conversational feedback message to trigger the LLM to re-evaluate and lower confidence
+      const feedbackMsg = "User Feedback: 👎 That solution did not work to resolve my issue. Do you have another idea?";
+      handleSend(feedbackMsg);
+    } else {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "✨ *Feedback received. I am glad that solution worked for you!*",
+        time: formatTime()
+      }]);
     }
   };
 

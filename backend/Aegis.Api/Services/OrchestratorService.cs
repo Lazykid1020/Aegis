@@ -11,8 +11,6 @@ public class OrchestratorService
     private readonly KnowledgeBaseService _knowledgeBase;
     private readonly ILogger<OrchestratorService> _logger;
 
-    // In-memory state tracking for the Hackathon POC
-    private static readonly Dictionary<string, string> _sessionTopArticle = new();
     private static readonly Dictionary<string, string> _pendingTickets = new();
 
     public OrchestratorService(BaseAgent agent, KnowledgeBaseService knowledgeBase, ILogger<OrchestratorService> logger)
@@ -28,42 +26,40 @@ public class OrchestratorService
 
         // 1. Context Retrieval via Volatile Vector DB (RAG)
         _logger.LogInformation("[Session {Session}] Retrieving RAG context from Volatile DB...", sessionId);
-        var ragResult = await _knowledgeBase.SearchAndScoreAsync(request.Message);
+        var context = await _knowledgeBase.SearchAsync(request.Message);
 
-        _logger.LogInformation("[Session {Session}] Confidence Score: {Score}%. Top Article: {Article}", sessionId, ragResult.ConfidenceScore, ragResult.TopArticleId);
+        // 2. Evaluate Dynamic Session Confidence via LLM
+        _logger.LogInformation("[Session {Session}] Evaluating Confidence...", sessionId);
+        var eval = await _agent.EvaluateConfidenceAsync(sessionId, request.Message, context);
+        _logger.LogInformation("[Session {Session}] Confidence Score: {Score}%. Reasoning: {Reasoning}", sessionId, eval.Score, eval.Reasoning);
 
-        // Track the article used so we can attach feedback to it later
-        if (ragResult.TopArticleId != null)
-        {
-            _sessionTopArticle[sessionId] = ragResult.TopArticleId;
-        }
-
-        // 2. Confidence Based Routing
+        // 3. Confidence Based Routing
         const double ConfidenceThreshold = 75.0;
 
-        if (ragResult.ConfidenceScore >= ConfidenceThreshold)
+        if (eval.Score >= ConfidenceThreshold)
         {
             // Tier 1: High Confidence -> Answer immediately based on Knowledge Base
             _logger.LogInformation("[Session {Session}] High Confidence. Routing to Base Agent.", sessionId);
-            var responseText = await _agent.ProcessMessageAsync(sessionId, request.Message, ragResult.Context);
+            var responseText = await _agent.ProcessMessageAsync(sessionId, request.Message, context);
 
             return new ChatResponse
             {
                 SessionId = sessionId,
-                Message = $"{responseText}\n\n*(Confidence: {ragResult.ConfidenceScore:F1}%)*",
+                Message = $"{responseText}\n\n*(Confidence: {eval.Score:F1}% - {eval.Reasoning})*",
                 ActionTaken = "action_info" // Tells UI to show feedback buttons
             };
         }
         else
         {
             // Tier 2: Low Confidence -> Ask to raise a ticket
-            _logger.LogWarning("[Session {Session}] Low Confidence ({Score}%). Requesting Ticket Approval.", sessionId, ragResult.ConfidenceScore);
+            _logger.LogWarning("[Session {Session}] Low Confidence ({Score}%). Requesting Ticket Approval.", sessionId, eval.Score);
             _pendingTickets[sessionId] = request.Message;
 
+            // Notice we feed the reasoning back to the user to explain WHY we're asking for a ticket
             return new ChatResponse
             {
                 SessionId = sessionId,
-                Message = $"I am only {ragResult.ConfidenceScore:F1}% confident I safely can solve this based on the knowledge base. Would you like me to raise a Priority IT Support Ticket for human assistance?",
+                Message = $"I am only {eval.Score:F1}% confident I can safely solve this based on my knowledge base. ({eval.Reasoning})\n\nWould you like me to skip troubleshooting and raise a Priority IT Support Ticket for human assistance right now?",
                 ActionTaken = "awaiting_approval",
                 RequiresApproval = true
             };
@@ -111,14 +107,8 @@ public class OrchestratorService
 
     public void RecordFeedback(string sessionId, bool isPositive, string? comment)
     {
-        if (_sessionTopArticle.TryGetValue(sessionId, out var articleId))
-        {
-            _logger.LogInformation("Routing feedback for Session {Session} to Article {ArticleId}. Positive: {IsPositive}", sessionId, articleId, isPositive);
-            _knowledgeBase.AdjustConfidence(articleId, isPositive);
-        }
-        else
-        {
-            _logger.LogWarning("Feedback received for Session {Session} but no associated article was found in memory.", sessionId);
-        }
+        // For the new conversational feedback model, the feedback is sent as a chat message. 
+        // This endpoint is no longer strictly necessary but kept for backwards compatibility with UI if needed.
+        _logger.LogInformation("Feedback endpoint hit for Session {Session}. (Ignored in favor of conversational feedback).", sessionId);
     }
 }
