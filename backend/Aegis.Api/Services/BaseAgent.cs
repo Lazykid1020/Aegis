@@ -48,10 +48,16 @@ public class BaseAgent
 
     public async Task<(double Score, string Reasoning)> EvaluateConfidenceAsync(string sessionId, string userMessage, string contextFromVectorDb)
     {
-        var scyllaHistory = new ChatHistory(@"You are an IT Support Confidence Evaluator. 
-Your job is to analyze the conversation history, the provided Knowledge Base Context, and the user's latest message.
-Determine your confidence that you can safely and effectively resolve the user's issue right now, WITHOUT needing human IT staff intervention.
-IMPORTANT: If the user indicates that your previous solution FAILED or did not work, you must significantly LOWER your confidence.
+        var scyllaHistory = new ChatHistory(@"You are an IT Support AI Confidence Evaluator. 
+Analyze the conversation history, the Knowledge Base Context, and the user's latest message.
+Determine your confidence (0-100) that you can safely and effectively progress or resolve the user's issue WITHOUT needing human IT staff intervention.
+
+CRITICAL RULES:
+1. GREETINGS & CLARIFICATIONS: If the user is just greeting (e.g., 'hey'), asking general questions, or if you need to ask clarifying questions to understand the issue, your confidence MUST BE HIGH (100). Gathering information is normal.
+2. TROUBLESHOOTING: If the user states an issue and you have a potential solution to offer based on the context, your confidence is HIGH (80-100).
+3. NEGATIVE FEEDBACK: If the user indicates that your previous solution FAILED, you must LOWER your confidence based on how effective you think your remaining solutions are.
+4. DEAD END: Only drop your confidence LOW (< 75) if you have exhausted your knowledge base, the issue explicitly requires human intervention, or the user rejected your final troubleshooting step and you have no more ideas.
+
 Respond strictly in JSON format: { ""confidenceScore"": 80, ""reasoning"": ""Your reason here"" }.");
 
         var history = GetOrCreateHistory(sessionId, contextFromVectorDb);
