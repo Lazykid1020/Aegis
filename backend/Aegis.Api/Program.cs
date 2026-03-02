@@ -28,7 +28,7 @@ builder.Services.AddHttpClient("MockApi", client =>
 // ── Microsoft Semantic Kernel (Google Gemini) ────────────────
 var geminiApiKey = builder.Configuration["Gemini:ApiKey"] ??
     Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? "";
-var geminiModel = builder.Configuration["Gemini:Model"] ?? "gemini-2.0-flash";
+var geminiModel = builder.Configuration["Gemini:Model"] ?? "gemini-2.0-flash-lite";
 
 #pragma warning disable SKEXP0070 // Google connector is experimental
 builder.Services.AddSingleton<Kernel>(sp =>

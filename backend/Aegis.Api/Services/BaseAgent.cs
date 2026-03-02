@@ -75,18 +75,31 @@ public class BaseAgent
             FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
         };
 
-        try
+        // Retry with exponential backoff for transient 429 rate limits
+        const int maxRetries = 3;
+        for (int attempt = 0; attempt <= maxRetries; attempt++)
         {
-            var result = await _chatService.GetChatMessageContentAsync(history, settings, _kernel);
-            var responseText = result.Content ?? string.Empty;
-            history.AddAssistantMessage(responseText);
-            return responseText;
+            try
+            {
+                var result = await _chatService.GetChatMessageContentAsync(history, settings, _kernel);
+                var responseText = result.Content ?? string.Empty;
+                history.AddAssistantMessage(responseText);
+                return responseText;
+            }
+            catch (Exception ex) when (ex.ToString().Contains("429") && attempt < maxRetries)
+            {
+                var delay = (int)Math.Pow(2, attempt + 1) * 1500; // 3s, 6s, 12s
+                _logger.LogWarning("Rate limited (429). Retrying in {Delay}ms (attempt {Attempt}/{Max})...", delay, attempt + 1, maxRetries);
+                await Task.Delay(delay);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing message in session {SessionId}", sessionId);
+                return "I'm sorry, I encountered an error processing your request. Please try again in a moment.";
+            }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing message in session {SessionId}", sessionId);
-            return "I'm sorry, I encountered an error processing your request. Please try again.";
-        }
+
+        return "I'm sorry, the AI service is temporarily busy. Please try again in a few seconds.";
     }
 
     /// <summary>
