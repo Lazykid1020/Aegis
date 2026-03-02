@@ -300,6 +300,24 @@
           }
         }
       },
+      "Microsoft.SemanticKernel.Connectors.InMemory/1.72.0-preview": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.2.0",
+          "Microsoft.Extensions.VectorData.Abstractions": "10.0.0",
+          "System.Numerics.Tensors": "10.0.2"
+        },
+        "compile": {
+          "lib/net10.0/Microsoft.SemanticKernel.Connectors.InMemory.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.SemanticKernel.Connectors.InMemory.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Microsoft.SemanticKernel.Connectors.OpenAI/1.72.0": {
         "type": "package",
         "dependencies": {
@@ -331,6 +349,23 @@
         },
         "runtime": {
           "lib/net10.0/Microsoft.SemanticKernel.Core.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "Microsoft.SemanticKernel.Plugins.Memory/1.72.0-alpha": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.SemanticKernel.Core": "1.72.0",
+          "System.Numerics.Tensors": "10.0.2"
+        },
+        "compile": {
+          "lib/net10.0/Microsoft.SemanticKernel.Plugins.Memory.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net10.0/Microsoft.SemanticKernel.Plugins.Memory.dll": {
             "related": ".xml"
           }
         }
@@ -844,6 +879,28 @@
         "microsoft.semantickernel.connectors.google.nuspec"
       ]
     },
+    "Microsoft.SemanticKernel.Connectors.InMemory/1.72.0-preview": {
+      "sha512": "+dvJQg+IipWHwNn881ysT/n1B9SZARyAQUx1xHNp/IIfri7H5zQdmm8Lf/8u+97SHgpwtJ/nMl74WB6jxXsBzQ==",
+      "type": "package",
+      "path": "microsoft.semantickernel.connectors.inmemory/1.72.0-preview",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "NUGET.md",
+        "VECTORDATA-CONNECTORS-NUGET.md",
+        "icon.png",
+        "lib/net10.0/Microsoft.SemanticKernel.Connectors.InMemory.dll",
+        "lib/net10.0/Microsoft.SemanticKernel.Connectors.InMemory.xml",
+        "lib/net462/Microsoft.SemanticKernel.Connectors.InMemory.dll",
+        "lib/net462/Microsoft.SemanticKernel.Connectors.InMemory.xml",
+        "lib/net8.0/Microsoft.SemanticKernel.Connectors.InMemory.dll",
+        "lib/net8.0/Microsoft.SemanticKernel.Connectors.InMemory.xml",
+        "lib/netstandard2.0/Microsoft.SemanticKernel.Connectors.InMemory.dll",
+        "lib/netstandard2.0/Microsoft.SemanticKernel.Connectors.InMemory.xml",
+        "microsoft.semantickernel.connectors.inmemory.1.72.0-preview.nupkg.sha512",
+        "microsoft.semantickernel.connectors.inmemory.nuspec"
+      ]
+    },
     "Microsoft.SemanticKernel.Connectors.OpenAI/1.72.0": {
       "sha512": "p/sIySdm8kFbFgp8vF/JPe4YEMotw6bkTP25igwyBnIjvW3VTX749fl8wLpLEUqbaoYmG/t9rr2aZdYeoro6UQ==",
       "type": "package",
@@ -880,6 +937,25 @@
         "lib/netstandard2.0/Microsoft.SemanticKernel.Core.xml",
         "microsoft.semantickernel.core.1.72.0.nupkg.sha512",
         "microsoft.semantickernel.core.nuspec"
+      ]
+    },
+    "Microsoft.SemanticKernel.Plugins.Memory/1.72.0-alpha": {
+      "sha512": "bURN2HJftHiPcbno4tlWxbP8XaTM5z5qMOSpYdSDfyk6gJMj6at0Nqphfn0uPBhhljPT0uQ30ZH+epNCEVKscg==",
+      "type": "package",
+      "path": "microsoft.semantickernel.plugins.memory/1.72.0-alpha",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "NUGET.md",
+        "icon.png",
+        "lib/net10.0/Microsoft.SemanticKernel.Plugins.Memory.dll",
+        "lib/net10.0/Microsoft.SemanticKernel.Plugins.Memory.xml",
+        "lib/net8.0/Microsoft.SemanticKernel.Plugins.Memory.dll",
+        "lib/net8.0/Microsoft.SemanticKernel.Plugins.Memory.xml",
+        "lib/netstandard2.0/Microsoft.SemanticKernel.Plugins.Memory.dll",
+        "lib/netstandard2.0/Microsoft.SemanticKernel.Plugins.Memory.xml",
+        "microsoft.semantickernel.plugins.memory.1.72.0-alpha.nupkg.sha512",
+        "microsoft.semantickernel.plugins.memory.nuspec"
       ]
     },
     "MimeTypes/2.5.2": {
@@ -1087,7 +1163,9 @@
     "net10.0": [
       "Microsoft.AspNetCore.OpenApi >= 10.0.3",
       "Microsoft.SemanticKernel >= 1.72.0",
-      "Microsoft.SemanticKernel.Connectors.Google >= 1.72.0-alpha"
+      "Microsoft.SemanticKernel.Connectors.Google >= 1.72.0-alpha",
+      "Microsoft.SemanticKernel.Connectors.InMemory >= 1.72.0-preview",
+      "Microsoft.SemanticKernel.Plugins.Memory >= 1.72.0-alpha"
     ]
   },
   "packageFolders": {
@@ -1142,6 +1220,14 @@
             "version": "[1.72.0, )"
           },
           "Microsoft.SemanticKernel.Connectors.Google": {
+            "target": "Package",
+            "version": "[1.72.0-alpha, )"
+          },
+          "Microsoft.SemanticKernel.Connectors.InMemory": {
+            "target": "Package",
+            "version": "[1.72.0-preview, )"
+          },
+          "Microsoft.SemanticKernel.Plugins.Memory": {
             "target": "Package",
             "version": "[1.72.0-alpha, )"
           }

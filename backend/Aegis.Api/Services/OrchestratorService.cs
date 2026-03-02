@@ -8,11 +8,13 @@ namespace Aegis.Api.Services;
 public class OrchestratorService
 {
     private readonly BaseAgent _agent;
+    private readonly KnowledgeBaseService _knowledgeBase;
     private readonly ILogger<OrchestratorService> _logger;
 
-    public OrchestratorService(BaseAgent agent, ILogger<OrchestratorService> logger)
+    public OrchestratorService(BaseAgent agent, KnowledgeBaseService knowledgeBase, ILogger<OrchestratorService> logger)
     {
         _agent = agent;
+        _knowledgeBase = knowledgeBase;
         _logger = logger;
     }
 
@@ -20,13 +22,13 @@ public class OrchestratorService
     {
         var sessionId = request.SessionId ?? Guid.NewGuid().ToString();
 
-        // 1. Mock Vector DB Context Retrieval
-        _logger.LogInformation("[Session {Session}] Retrieving context from Vector DB...", sessionId);
-        var mockVectorDbContext = GetMockVectorDbContext(request.Message);
+        // 1. Context Retrieval via Volatile Vector DB (RAG)
+        _logger.LogInformation("[Session {Session}] Retrieving RAG context from Volatile DB...", sessionId);
+        var vectorDbContext = await _knowledgeBase.SearchAsync(request.Message);
 
         // 2. Process message through the Base Agent
-        _logger.LogInformation("[Session {Session}] Passing to Base Agent...", sessionId);
-        var responseText = await _agent.ProcessMessageAsync(sessionId, request.Message, mockVectorDbContext);
+        _logger.LogInformation("[Session {Session}] Passing to Base Agent. Context: \n{Context}", sessionId, vectorDbContext);
+        var responseText = await _agent.ProcessMessageAsync(sessionId, request.Message, vectorDbContext);
 
         return new ChatResponse
         {
@@ -34,19 +36,6 @@ public class OrchestratorService
             Message = responseText,
             ActionTaken = "none" // The agent actually uses the ticket tool natively, so we just return the text.
         };
-    }
-
-    // Mocking the Vector DB Context retrieval for the MVP
-    private string GetMockVectorDbContext(string query)
-    {
-        query = query.ToLower();
-        if (query.Contains("vpn"))
-            return "Article: VPN Access. Staff level employees cannot access the production VPN. Only Admins can. Contractor access must be requested via ticket.";
-        
-        if (query.Contains("password") || query.Contains("locked"))
-            return "SOP: Account Recovery. For locked accounts, users must submit a ticket if the Self-Service portal fails. For password resets, verify identity via ticket.";
-        
-        return "General IT Knowledge: If the user describes a hardware issue or critical server crash, always use the create_support_ticket tool with Urgency=High or Critical.";
     }
 
     // Unused in MVP, just here so the controller doesn't break if it has these routes

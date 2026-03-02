@@ -48,10 +48,15 @@ builder.Services.AddSingleton<Kernel>(sp =>
 #pragma warning restore SKEXP0070
 
 // ── Register our Agent Services ──────────────────────────────
+builder.Services.AddSingleton<KnowledgeBaseService>();
 builder.Services.AddSingleton<BaseAgent>();
 builder.Services.AddSingleton<OrchestratorService>();
 
 var app = builder.Build();
+
+// ── Initialize Knowledge Base ────────────────────────────────
+var kb = app.Services.GetRequiredService<KnowledgeBaseService>();
+kb.InitializeAsync().Wait();
 
 // ── Middleware Pipeline ──────────────────────────────────────
 if (app.Environment.IsDevelopment())
