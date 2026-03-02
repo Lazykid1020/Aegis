@@ -136,7 +136,7 @@ export default function App() {
             <span className="page-title">IT Support Chat</span>
           </div>
           <div className="header-right">
-            <span className="model-badge">gemini-2.5-flash</span>
+            <span className="model-badge">gpt-5-mini</span>
           </div>
         </header>
 
