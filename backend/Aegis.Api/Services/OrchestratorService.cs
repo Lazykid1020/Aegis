@@ -1,5 +1,6 @@
 using Aegis.Api.Models;
 using Aegis.Api.Plugins;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -21,7 +22,7 @@ public class OrchestratorService
     private readonly ILogger<OrchestratorService> _logger;
 
     // Server-side confidence tracking per session
-    private static readonly Dictionary<string, double> _sessionConfidence = new();
+    private static readonly ConcurrentDictionary<string, double> _sessionConfidence = new();
 
     private const double InitialConfidence = 1.0;
     private const double EscalationThreshold = 0.4;
@@ -65,32 +66,31 @@ public class OrchestratorService
         }
 
         // 2. Get or initialize confidence for this session
-        if (!_sessionConfidence.ContainsKey(sessionId))
-            _sessionConfidence[sessionId] = InitialConfidence;
+        _sessionConfidence.TryAdd(sessionId, InitialConfidence);
 
         var currentConfidence = _sessionConfidence[sessionId];
 
         // 3. Fetch RAG context
         var ragContext = await _knowledgeBase.SearchAsync(request.Message);
 
-        // 3. Set session ID on the plugin so tool calls know which session they belong to
+        // 4. Set session ID on the plugin so tool calls know which session they belong to
         ITOperationsPlugin.CurrentSessionId = sessionId;
 
-        // 4. Prepend confidence to the user message
+        // 5. Prepend confidence to the user message
         var enrichedMessage = $"[CONFIDENCE: {currentConfidence:F2}] {request.Message}";
 
         _logger.LogInformation("[Session {Session}] Confidence: {Confidence:F2} | Sending to agent.", sessionId, currentConfidence);
 
-        // 5. Let the agent handle the conversation
+        // 6. Let the agent handle the conversation
         var rawResponse = await _agent.ProcessMessageAsync(sessionId, enrichedMessage, ragContext);
 
-        // 6. Parse and apply confidence delta
+        // 7. Parse and apply confidence delta
         var newConfidence = ApplyConfidenceDelta(sessionId, rawResponse, currentConfidence);
 
-        // 7. Strip delta signal from user-facing output
+        // 8. Strip delta signal from user-facing output
         var cleanResponse = ConfidenceDeltaRegex.Replace(rawResponse, "").Trim();
 
-        // 8. GUARDRAIL: Validate output against policies
+        // 9. GUARDRAIL: Validate output against policies
         var outputCheck = await _guardrail.ValidateOutputAsync(cleanResponse, request.Message);
         if (!outputCheck.Allowed)
         {
@@ -98,10 +98,10 @@ public class OrchestratorService
             cleanResponse = outputCheck.CorrectedResponse!;
         }
 
-        // 9. Log the conversation turn
+        // 10. Log the conversation turn
         await _chatLogger.LogTurnAsync(sessionId, request.UserId, request.Message, cleanResponse, newConfidence);
 
-        // 9. Check if the tool stored a pending ticket (tool-based approval gate)
+        // 11. Check if the tool stored a pending ticket (tool-based approval gate)
         if (ITOperationsPlugin.HasPendingTicket(sessionId))
         {
             var ticket = ITOperationsPlugin.GetPendingTicket(sessionId)!;
@@ -117,7 +117,7 @@ public class OrchestratorService
             };
         }
 
-        // 10. Check if confidence crossed the threshold — force ticket escalation
+        // 12. Check if confidence crossed the threshold — force ticket escalation
         if (newConfidence < EscalationThreshold && !ITOperationsPlugin.HasPendingTicket(sessionId))
         {
             _logger.LogInformation("[Session {Session}] Confidence {Confidence:F2} below threshold. Forcing escalation.",
@@ -155,7 +155,7 @@ public class OrchestratorService
             };
         }
 
-        // 11. Normal response
+        // 13. Normal response
         return new ChatResponse
         {
             SessionId = sessionId,

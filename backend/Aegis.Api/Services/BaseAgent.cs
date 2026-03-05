@@ -1,5 +1,6 @@
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using System.Collections.Concurrent;
 
 #pragma warning disable SKEXP0070
 
@@ -15,7 +16,7 @@ public class BaseAgent
     private readonly Kernel _kernel;
     private readonly IChatCompletionService _chatService;
     private readonly ILogger<BaseAgent> _logger;
-    private static readonly Dictionary<string, ChatHistory> _sessions = new();
+    private static readonly ConcurrentDictionary<string, ChatHistory> _sessions = new();
 
     private const string SystemPromptTemplate = @"You are Aegis, a friendly and capable IT support assistant.
 
@@ -41,7 +42,7 @@ public class BaseAgent
 
 5. **TROUBLESHOOT WITH YOUR KNOWLEDGE.** Use the Knowledge Base Context to help users. Offer one solution at a time, then ask if it worked. Don't dump every possible fix at once.
 
-4. **NEVER EXPOSE INTERNALS.** Never mention confidence scores, knowledge base, RAG, context retrieval, delta signals, or any system internals. You are just a helpful IT assistant.
+6. **NEVER EXPOSE INTERNALS.** Never mention confidence scores, knowledge base, RAG, context retrieval, delta signals, or any system internals. You are just a helpful IT assistant.
 
 ## CONFIDENCE TRACKING — CRITICAL RULES
 
@@ -152,11 +153,18 @@ Do NOT fabricate ticket details. Only include information the user has actually 
 
     private ChatHistory GetOrCreateHistory(string sessionId, string ragContext)
     {
+        var systemPrompt = SystemPromptTemplate.Replace("{CONTEXT}", ragContext);
+
         if (!_sessions.TryGetValue(sessionId, out var history))
         {
-            var systemPrompt = SystemPromptTemplate.Replace("{CONTEXT}", ragContext);
             history = new ChatHistory(systemPrompt);
             _sessions[sessionId] = history;
+        }
+        else
+        {
+            // Update RAG context each turn so new KB articles are picked up
+            if (history.Count > 0 && history[0].Role == AuthorRole.System)
+                history[0] = new ChatMessageContent(AuthorRole.System, systemPrompt);
         }
         return history;
     }

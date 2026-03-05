@@ -10,6 +10,7 @@ export default function App() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState('chat');
+  const [sessionId] = useState(() => `session-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -27,7 +28,7 @@ export default function App() {
     setLoading(true);
 
     try {
-      const data = await sendMessage('demo-user', msg, 'rag-session');
+      const data = await sendMessage('demo-user', msg, sessionId);
       const assistantMsg = {
         role: 'assistant',
         content: data.message,
@@ -58,7 +59,7 @@ export default function App() {
     clearApprovalButtons();
     setLoading(true);
     try {
-      const data = await approveAction('rag-session');
+      const data = await approveAction(sessionId);
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: `✔️ **Ticket Created Successfully.**\n\n${data.message}`,
@@ -80,7 +81,7 @@ export default function App() {
     clearApprovalButtons();
     setLoading(true);
     try {
-      const data = await rejectAction('rag-session');
+      const data = await rejectAction(sessionId);
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: data.message,
@@ -178,7 +179,10 @@ export default function App() {
                       </div>
                       <div className="message-content" dangerouslySetInnerHTML={{
                         __html: msg.content
-                          ?.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          ?.replace(/&/g, '&amp;')
+                          .replace(/</g, '&lt;')
+                          .replace(/>/g, '&gt;')
+                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                           .replace(/\*(.*?)\*/g, '<em>$1</em>')
                           .replace(/\n/g, '<br/>')
                       }} />

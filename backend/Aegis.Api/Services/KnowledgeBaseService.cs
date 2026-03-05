@@ -10,8 +10,6 @@ public class KnowledgeBaseService
         _logger = logger;
     }
 
-    private readonly Dictionary<string, double> _feedbackModifiers = new();
-
     public Task InitializeAsync()
     {
         _logger.LogInformation("Initializing Mock Volatile Knowledge Base...");
@@ -21,11 +19,6 @@ public class KnowledgeBaseService
         _memoryStore["kb-pwd-001"] = "SOP: Account Recovery. For locked accounts, users must submit a ticket if the Self-Service portal fails. For password resets, verify identity via ticket.";
         _memoryStore["ticket-INC102"] = "Resolution for Server Crash: If a user reports the production server crashed or is unresponsive, do not attempt to walk them through troubleshooting. Immediately use the create_support_ticket tool with Urgency=Critical so the DevOps team is paged.";
         _memoryStore["kb-wifi-001"] = "Article: Guest WiFi. To connect to the Guest WiFi, select 'Aegis-Guest' and enter the password 'Welcome2026!'. This is safe to share with any user.";
-
-        foreach (var key in _memoryStore.Keys)
-        {
-            _feedbackModifiers[key] = 0.0;
-        }
 
         _logger.LogInformation("Mock Volatile Knowledge Base successfully populated with {Count} records.", _memoryStore.Count);
         return Task.CompletedTask;

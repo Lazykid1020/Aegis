@@ -1,4 +1,5 @@
 using Microsoft.SemanticKernel;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -17,7 +18,7 @@ public class ITOperationsPlugin
     private readonly HttpClient _httpClient;
 
     // Pending tickets per session — the approval gate
-    private static readonly Dictionary<string, TicketPreview> _pendingTickets = new();
+    private static readonly ConcurrentDictionary<string, TicketPreview> _pendingTickets = new();
 
     public ITOperationsPlugin(IHttpClientFactory httpClientFactory)
     {
@@ -63,7 +64,7 @@ public class ITOperationsPlugin
         if (!_pendingTickets.TryGetValue(sessionId, out var ticket))
             return "No pending ticket found for this session.";
 
-        _pendingTickets.Remove(sessionId);
+        _pendingTickets.TryRemove(sessionId, out _);
 
         var response = await _httpClient.PostAsJsonAsync("/api/mock/servicenow/ticket",
             new { title = ticket.Title, description = ticket.Description, category = ticket.Category, urgency = ticket.Urgency, reportedBy = "aegis-ai" });
@@ -85,7 +86,7 @@ public class ITOperationsPlugin
         => _pendingTickets.TryGetValue(sessionId, out var t) ? t : null;
 
     public static void ClearPendingTicket(string sessionId)
-        => _pendingTickets.Remove(sessionId);
+        => _pendingTickets.TryRemove(sessionId, out _);
 
     // AsyncLocal session ID flows correctly across async/await boundaries
     private static readonly AsyncLocal<string?> _currentSessionId = new();

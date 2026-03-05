@@ -121,15 +121,12 @@ The corrected response should be natural and helpful — just remove or rephrase
             var result = await _chatService.GetChatMessageContentAsync(history);
             var raw = result.Content?.Trim() ?? "";
 
-            // Try to parse JSON from the response (handle markdown code blocks)
+            // Extract JSON from response (handle markdown code blocks, leading text, etc.)
             var jsonStr = raw;
-            if (raw.Contains("```"))
-            {
-                var start = raw.IndexOf('{');
-                var end = raw.LastIndexOf('}');
-                if (start >= 0 && end > start)
-                    jsonStr = raw.Substring(start, end - start + 1);
-            }
+            var start = raw.IndexOf('{');
+            var end = raw.LastIndexOf('}');
+            if (start >= 0 && end > start)
+                jsonStr = raw.Substring(start, end - start + 1);
 
             using var doc = JsonDocument.Parse(jsonStr);
             var allowed = doc.RootElement.GetProperty("allowed").GetBoolean();
