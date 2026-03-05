@@ -54,6 +54,7 @@ builder.Services.AddSingleton<Kernel>(sp =>
 builder.Services.AddSingleton<ITOperationsPlugin>(sp =>
     new ITOperationsPlugin(sp.GetRequiredService<IHttpClientFactory>()));
 builder.Services.AddSingleton<ChatLogger>();
+builder.Services.AddSingleton<GuardrailService>();
 builder.Services.AddSingleton<KnowledgeBaseService>();
 builder.Services.AddSingleton<BaseAgent>();
 builder.Services.AddSingleton<OrchestratorService>();

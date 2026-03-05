@@ -59,3 +59,4 @@
 /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/bin/Debug/net10.0/runtimes/win/lib/net7.0/System.Management.dll
 /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/bin/Debug/net10.0/Microsoft.SemanticKernel.Connectors.InMemory.dll
 /Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/bin/Debug/net10.0/Microsoft.SemanticKernel.Plugins.Memory.dll
+/Users/dheerajkoka/Documents/ryan-Hackathon/backend/Aegis.Api/bin/Debug/net10.0/guardrail-policies.json

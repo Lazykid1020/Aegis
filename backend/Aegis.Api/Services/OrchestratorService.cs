@@ -16,6 +16,7 @@ public class OrchestratorService
     private readonly BaseAgent _agent;
     private readonly KnowledgeBaseService _knowledgeBase;
     private readonly ITOperationsPlugin _ticketPlugin;
+    private readonly GuardrailService _guardrail;
     private readonly ChatLogger _chatLogger;
     private readonly ILogger<OrchestratorService> _logger;
 
@@ -33,12 +34,14 @@ public class OrchestratorService
         BaseAgent agent,
         KnowledgeBaseService knowledgeBase,
         ITOperationsPlugin ticketPlugin,
+        GuardrailService guardrail,
         ChatLogger chatLogger,
         ILogger<OrchestratorService> logger)
     {
         _agent = agent;
         _knowledgeBase = knowledgeBase;
         _ticketPlugin = ticketPlugin;
+        _guardrail = guardrail;
         _chatLogger = chatLogger;
         _logger = logger;
     }
@@ -47,13 +50,27 @@ public class OrchestratorService
     {
         var sessionId = request.SessionId ?? Guid.NewGuid().ToString();
 
-        // 1. Get or initialize confidence for this session
+        // 1. GUARDRAIL: Validate input against scope and policies
+        var inputCheck = await _guardrail.ValidateInputAsync(request.Message);
+        if (!inputCheck.Allowed)
+        {
+            _logger.LogWarning("[Session {Session}] Guardrail blocked input. Policy: {Policy}", sessionId, inputCheck.ViolatedPolicyId);
+            await _chatLogger.LogTurnAsync(sessionId, request.UserId, request.Message, inputCheck.CorrectedResponse!, 0);
+            return new ChatResponse
+            {
+                SessionId = sessionId,
+                Message = inputCheck.CorrectedResponse!,
+                ActionTaken = "blocked_by_guardrail"
+            };
+        }
+
+        // 2. Get or initialize confidence for this session
         if (!_sessionConfidence.ContainsKey(sessionId))
             _sessionConfidence[sessionId] = InitialConfidence;
 
         var currentConfidence = _sessionConfidence[sessionId];
 
-        // 2. Fetch RAG context
+        // 3. Fetch RAG context
         var ragContext = await _knowledgeBase.SearchAsync(request.Message);
 
         // 3. Set session ID on the plugin so tool calls know which session they belong to
@@ -73,7 +90,15 @@ public class OrchestratorService
         // 7. Strip delta signal from user-facing output
         var cleanResponse = ConfidenceDeltaRegex.Replace(rawResponse, "").Trim();
 
-        // 8. Log the conversation turn
+        // 8. GUARDRAIL: Validate output against policies
+        var outputCheck = await _guardrail.ValidateOutputAsync(cleanResponse, request.Message);
+        if (!outputCheck.Allowed)
+        {
+            _logger.LogWarning("[Session {Session}] Guardrail corrected output. Policy: {Policy}", sessionId, outputCheck.ViolatedPolicyId);
+            cleanResponse = outputCheck.CorrectedResponse!;
+        }
+
+        // 9. Log the conversation turn
         await _chatLogger.LogTurnAsync(sessionId, request.UserId, request.Message, cleanResponse, newConfidence);
 
         // 9. Check if the tool stored a pending ticket (tool-based approval gate)
