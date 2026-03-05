@@ -1,4 +1,5 @@
 using Aegis.Api.Models;
+using Aegis.Api.Plugins;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -7,34 +8,38 @@ namespace Aegis.Api.Services;
 /// <summary>
 /// Thin orchestrator that owns the confidence score per session.
 /// Fetches RAG context, passes the current confidence to the agent,
-/// parses delta + ticket signals from the response, and enforces
-/// the escalation threshold.
+/// parses confidence deltas, and checks the ITOperationsPlugin for
+/// pending ticket approvals (no more regex signal parsing for tickets).
 /// </summary>
 public class OrchestratorService
 {
     private readonly BaseAgent _agent;
     private readonly KnowledgeBaseService _knowledgeBase;
+    private readonly ITOperationsPlugin _ticketPlugin;
+    private readonly ChatLogger _chatLogger;
     private readonly ILogger<OrchestratorService> _logger;
 
     // Server-side confidence tracking per session
     private static readonly Dictionary<string, double> _sessionConfidence = new();
-    private static readonly Dictionary<string, TicketPreview> _pendingTickets = new();
 
     private const double InitialConfidence = 1.0;
     private const double EscalationThreshold = 0.4;
-
-    private static readonly Regex TicketSignalRegex = new(
-        @":::TICKET_SIGNAL:::\s*(\{.*?\})\s*:::END_SIGNAL:::",
-        RegexOptions.Singleline | RegexOptions.Compiled);
 
     private static readonly Regex ConfidenceDeltaRegex = new(
         @":::CONFIDENCE_DELTA:::\s*(\{.*?\})\s*:::END_DELTA:::",
         RegexOptions.Singleline | RegexOptions.Compiled);
 
-    public OrchestratorService(BaseAgent agent, KnowledgeBaseService knowledgeBase, ILogger<OrchestratorService> logger)
+    public OrchestratorService(
+        BaseAgent agent,
+        KnowledgeBaseService knowledgeBase,
+        ITOperationsPlugin ticketPlugin,
+        ChatLogger chatLogger,
+        ILogger<OrchestratorService> logger)
     {
         _agent = agent;
         _knowledgeBase = knowledgeBase;
+        _ticketPlugin = ticketPlugin;
+        _chatLogger = chatLogger;
         _logger = logger;
     }
 
@@ -51,74 +56,72 @@ public class OrchestratorService
         // 2. Fetch RAG context
         var ragContext = await _knowledgeBase.SearchAsync(request.Message);
 
-        // 3. Prepend confidence to the user message so the agent knows the current score
+        // 3. Set session ID on the plugin so tool calls know which session they belong to
+        ITOperationsPlugin.CurrentSessionId = sessionId;
+
+        // 4. Prepend confidence to the user message
         var enrichedMessage = $"[CONFIDENCE: {currentConfidence:F2}] {request.Message}";
 
         _logger.LogInformation("[Session {Session}] Confidence: {Confidence:F2} | Sending to agent.", sessionId, currentConfidence);
 
-        // 4. Let the agent handle the conversation
+        // 5. Let the agent handle the conversation
         var rawResponse = await _agent.ProcessMessageAsync(sessionId, enrichedMessage, ragContext);
 
-        // 5. Parse and apply confidence delta (if emitted)
-        var deltaMatch = ConfidenceDeltaRegex.Match(rawResponse);
-        if (deltaMatch.Success)
-        {
-            try
-            {
-                var deltaJson = deltaMatch.Groups[1].Value;
-                using var doc = JsonDocument.Parse(deltaJson);
-                var delta = doc.RootElement.GetProperty("delta").GetDouble();
-                var reason = doc.RootElement.TryGetProperty("reason", out var r) ? r.GetString() : "n/a";
+        // 6. Parse and apply confidence delta
+        var newConfidence = ApplyConfidenceDelta(sessionId, rawResponse, currentConfidence);
 
-                // Clamp delta to [-1.0, +0.5] to prevent wild swings
-                delta = Math.Clamp(delta, -1.0, 0.5);
-
-                var newConfidence = Math.Clamp(currentConfidence + delta, 0.0, 1.0);
-                _sessionConfidence[sessionId] = newConfidence;
-
-                _logger.LogInformation("[Session {Session}] Delta: {Delta:+0.00;-0.00} → Confidence: {Old:F2} → {New:F2} | Reason: {Reason}",
-                    sessionId, delta, currentConfidence, newConfidence, reason);
-
-                currentConfidence = newConfidence;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[Session {Session}] Failed to parse confidence delta.", sessionId);
-            }
-        }
-
-        // Strip the delta signal from user-facing output
+        // 7. Strip delta signal from user-facing output
         var cleanResponse = ConfidenceDeltaRegex.Replace(rawResponse, "").Trim();
 
-        // 6. Check if agent already emitted a ticket signal
-        var ticketMatch = TicketSignalRegex.Match(cleanResponse);
-        if (ticketMatch.Success)
+        // 8. Log the conversation turn
+        await _chatLogger.LogTurnAsync(sessionId, request.UserId, request.Message, cleanResponse, newConfidence);
+
+        // 9. Check if the tool stored a pending ticket (tool-based approval gate)
+        if (ITOperationsPlugin.HasPendingTicket(sessionId))
         {
-            return HandleTicketSignal(sessionId, cleanResponse, ticketMatch);
+            var ticket = ITOperationsPlugin.GetPendingTicket(sessionId)!;
+            _logger.LogInformation("[Session {Session}] Tool created pending ticket: {Title}", sessionId, ticket.Title);
+
+            return new ChatResponse
+            {
+                SessionId = sessionId,
+                Message = cleanResponse,
+                ActionTaken = "awaiting_approval",
+                RequiresApproval = true,
+                ProposedTicket = ticket
+            };
         }
 
-        // 7. Check if confidence crossed the threshold — force ticket escalation
-        if (currentConfidence < EscalationThreshold && !_pendingTickets.ContainsKey(sessionId))
+        // 10. Check if confidence crossed the threshold — force ticket escalation
+        if (newConfidence < EscalationThreshold && !ITOperationsPlugin.HasPendingTicket(sessionId))
         {
-            _logger.LogInformation("[Session {Session}] Confidence {Confidence:F2} below threshold {Threshold}. Forcing ticket escalation.",
-                sessionId, currentConfidence, EscalationThreshold);
+            _logger.LogInformation("[Session {Session}] Confidence {Confidence:F2} below threshold. Forcing escalation.",
+                sessionId, newConfidence);
+
+            ITOperationsPlugin.CurrentSessionId = sessionId;
 
             var escalationInstruction =
-                "Confidence is critically low. The system requires you to propose a support ticket now. " +
-                "Summarize the issue and what was discussed, then output a :::TICKET_SIGNAL::: block. " +
-                "Keep your message to the user brief — just explain that this needs human attention.";
+                "Confidence is critically low. You MUST now call the create_support_ticket tool " +
+                "to propose a ticket for this issue. Summarize the issue and what was discussed.";
 
             var escalationResponse = await _agent.SendSystemInstructionAsync(sessionId, escalationInstruction, ragContext);
-
             var escalationClean = ConfidenceDeltaRegex.Replace(escalationResponse, "").Trim();
-            var escalationTicket = TicketSignalRegex.Match(escalationClean);
 
-            if (escalationTicket.Success)
+            await _chatLogger.LogTurnAsync(sessionId, "system", "[ESCALATION_FORCED]", escalationClean, newConfidence);
+
+            if (ITOperationsPlugin.HasPendingTicket(sessionId))
             {
-                return HandleTicketSignal(sessionId, escalationClean, escalationTicket);
+                var ticket = ITOperationsPlugin.GetPendingTicket(sessionId)!;
+                return new ChatResponse
+                {
+                    SessionId = sessionId,
+                    Message = escalationClean,
+                    ActionTaken = "awaiting_approval",
+                    RequiresApproval = true,
+                    ProposedTicket = ticket
+                };
             }
 
-            // Agent didn't emit a signal even when forced — return the response anyway
             return new ChatResponse
             {
                 SessionId = sessionId,
@@ -127,7 +130,7 @@ public class OrchestratorService
             };
         }
 
-        // 8. Normal response
+        // 11. Normal response
         return new ChatResponse
         {
             SessionId = sessionId,
@@ -138,25 +141,26 @@ public class OrchestratorService
 
     public async Task<ChatResponse> ApproveActionAsync(string sessionId)
     {
-        _logger.LogInformation("[Session {Session}] Ticket approved.", sessionId);
+        _logger.LogInformation("[Session {Session}] Ticket approved by user.", sessionId);
 
-        if (_pendingTickets.TryGetValue(sessionId, out var ticket))
+        if (ITOperationsPlugin.HasPendingTicket(sessionId))
         {
-            _pendingTickets.Remove(sessionId);
+            // Actually create the ticket via the mock API
+            var result = await _ticketPlugin.ConfirmPendingTicketAsync(sessionId);
 
             // Reset confidence after ticket creation
             _sessionConfidence[sessionId] = InitialConfidence;
 
-            var instruction = $"The user has APPROVED creating the support ticket. " +
-                              $"Please now use the create_support_ticket tool with these details: " +
-                              $"Title: '{ticket.Title}', Description: '{ticket.Description}', " +
-                              $"Category: '{ticket.Category}', Urgency: '{ticket.Urgency}'.";
+            // Tell the agent the ticket was created so it can respond naturally
+            var ragContext = await _knowledgeBase.SearchAsync("");
+            var responseText = await _agent.SendSystemInstructionAsync(
+                sessionId,
+                $"The user approved the ticket and it has been created. {result} " +
+                "Briefly confirm to the user and ask if there's anything else you can help with.",
+                ragContext);
 
-            var ragContext = await _knowledgeBase.SearchAsync(ticket.Title ?? "");
-            var responseText = await _agent.SendSystemInstructionAsync(sessionId, instruction, ragContext);
-
-            // Strip any delta signals from post-approval response
             responseText = ConfidenceDeltaRegex.Replace(responseText, "").Trim();
+            await _chatLogger.LogTurnAsync(sessionId, "system", "[TICKET_APPROVED]", responseText, InitialConfidence);
 
             return new ChatResponse
             {
@@ -176,22 +180,22 @@ public class OrchestratorService
 
     public async Task<ChatResponse> RejectActionAsync(string sessionId)
     {
-        _logger.LogInformation("[Session {Session}] Ticket rejected.", sessionId);
+        _logger.LogInformation("[Session {Session}] Ticket rejected by user.", sessionId);
 
-        if (_pendingTickets.ContainsKey(sessionId))
-            _pendingTickets.Remove(sessionId);
+        ITOperationsPlugin.ClearPendingTicket(sessionId);
 
-        // Bump confidence slightly after rejection so agent doesn't immediately re-propose
+        // Bump confidence slightly after rejection
         if (_sessionConfidence.ContainsKey(sessionId))
             _sessionConfidence[sessionId] = Math.Min(_sessionConfidence[sessionId] + 0.15, 1.0);
 
         var ragContext = await _knowledgeBase.SearchAsync("");
         var responseText = await _agent.SendSystemInstructionAsync(
             sessionId,
-            "The user has REJECTED the ticket creation. Acknowledge this briefly and ask if there's anything else you can help with.",
+            "The user rejected the ticket. Acknowledge briefly and ask if there's anything else you can help with.",
             ragContext);
 
         responseText = ConfidenceDeltaRegex.Replace(responseText, "").Trim();
+        await _chatLogger.LogTurnAsync(sessionId, "system", "[TICKET_REJECTED]", responseText, _sessionConfidence.GetValueOrDefault(sessionId, InitialConfidence));
 
         return new ChatResponse
         {
@@ -201,43 +205,31 @@ public class OrchestratorService
         };
     }
 
-    private ChatResponse HandleTicketSignal(string sessionId, string cleanResponse, Match ticketMatch)
+    private double ApplyConfidenceDelta(string sessionId, string rawResponse, double currentConfidence)
     {
+        var deltaMatch = ConfidenceDeltaRegex.Match(rawResponse);
+        if (!deltaMatch.Success) return currentConfidence;
+
         try
         {
-            var json = ticketMatch.Groups[1].Value;
-            var ticket = JsonSerializer.Deserialize<TicketPreview>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var deltaJson = deltaMatch.Groups[1].Value;
+            using var doc = JsonDocument.Parse(deltaJson);
+            var delta = doc.RootElement.GetProperty("delta").GetDouble();
+            var reason = doc.RootElement.TryGetProperty("reason", out var r) ? r.GetString() : "n/a";
 
-            if (ticket != null && ticket.Action == "REQUEST_TICKET_APPROVAL")
-            {
-                _pendingTickets[sessionId] = ticket;
-                var cleanMessage = TicketSignalRegex.Replace(cleanResponse, "").Trim();
+            delta = Math.Clamp(delta, -1.0, 0.5);
+            var newConfidence = Math.Clamp(currentConfidence + delta, 0.0, 1.0);
+            _sessionConfidence[sessionId] = newConfidence;
 
-                _logger.LogInformation("[Session {Session}] Ticket proposed: {Title}", sessionId, ticket.Title);
+            _logger.LogInformation("[Session {Session}] Delta: {Delta:+0.00;-0.00} → Confidence: {Old:F2} → {New:F2} | Reason: {Reason}",
+                sessionId, delta, currentConfidence, newConfidence, reason);
 
-                return new ChatResponse
-                {
-                    SessionId = sessionId,
-                    Message = cleanMessage,
-                    ActionTaken = "awaiting_approval",
-                    RequiresApproval = true,
-                    ProposedTicket = ticket
-                };
-            }
+            return newConfidence;
         }
-        catch (JsonException ex)
+        catch (Exception ex)
         {
-            _logger.LogWarning(ex, "[Session {Session}] Failed to parse ticket signal.", sessionId);
+            _logger.LogWarning(ex, "[Session {Session}] Failed to parse confidence delta.", sessionId);
+            return currentConfidence;
         }
-
-        return new ChatResponse
-        {
-            SessionId = sessionId,
-            Message = TicketSignalRegex.Replace(cleanResponse, "").Trim(),
-            ActionTaken = "none"
-        };
     }
 }

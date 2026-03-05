@@ -43,14 +43,17 @@ builder.Services.AddSingleton<Kernel>(sp =>
         endpoint: azureEndpoint,
         apiKey: azureApiKey);
 
-    // Register the IT Operations plugin
-    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-    kernelBuilder.Plugins.AddFromObject(new ITOperationsPlugin(httpClientFactory), "ITOperations");
+    // Register the IT Operations plugin (shared instance for pending ticket state)
+    var plugin = sp.GetRequiredService<ITOperationsPlugin>();
+    kernelBuilder.Plugins.AddFromObject(plugin, "ITOperations");
 
     return kernelBuilder.Build();
 });
 
 // ── Register our Agent Services ──────────────────────────────
+builder.Services.AddSingleton<ITOperationsPlugin>(sp =>
+    new ITOperationsPlugin(sp.GetRequiredService<IHttpClientFactory>()));
+builder.Services.AddSingleton<ChatLogger>();
 builder.Services.AddSingleton<KnowledgeBaseService>();
 builder.Services.AddSingleton<BaseAgent>();
 builder.Services.AddSingleton<OrchestratorService>();
