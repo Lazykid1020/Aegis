@@ -16,9 +16,6 @@ build/
 # User secrets
 secrets.json
 
-# ── Chat Logs (generated at runtime) ──────────────────────────
-backend/Aegis.Api/logs/
-
 # ── Node / Frontend ───────────────────────────────────────────
 node_modules/
 dist/
