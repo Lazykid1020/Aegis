@@ -1,0 +1,43 @@
+# ── .NET / C# ─────────────────────────────────────────────────
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+*.log
+
+# User secrets
+secrets.json
+
+# ── Chat Logs (generated at runtime) ──────────────────────────
+backend/Aegis.Api/logs/
+
+# ── Node / Frontend ───────────────────────────────────────────
+node_modules/
+dist/
+.cache/
+*.tsbuildinfo
+
+# ── OS Files ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ── IDE ───────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.code-workspace
+
+# ── Environment ───────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
